@@ -1,0 +1,16 @@
+
+server:
+  servlet:
+    context-path: /SpringBootApplication
+
+spring:
+  main:
+    banner-mode: "off"
+datasource:
+    platform: h2
+
+logging:
+  level:
+    org:
+      springframework: ERROR
+      
