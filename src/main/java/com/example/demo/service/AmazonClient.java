@@ -72,6 +72,7 @@ public class AmazonClient {
 
 	public String uploadFile(MultipartFile multipartFile) {
 		
+		
 		return extractValue(multipartFile.getOriginalFilename(), (Object) multipartFile);
 		 
 	}
@@ -111,14 +112,17 @@ public class AmazonClient {
 		FileOutputStream fos;
 		String jsonStr = null;
 		try {
+			fos = new FileOutputStream(file);
 			if( data instanceof Employee)
 				jsonStr = Obj.writeValueAsString(data);
 			else if( data instanceof Company)
 				jsonStr = Obj.writeValueAsString(data);
 			else {
-				jsonStr=data.toString();
+				fos.write(((MultipartFile) data).getBytes());
+				fos.close();
+				return file;
 			}
-			fos = new FileOutputStream(file);
+			
 			fos.write(jsonStr.getBytes());
 			fos.close();
 		} catch (JsonProcessingException e) {
