@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.model.Employee;
+import com.example.demo.service.AmazonClient;
 import com.example.demo.service.IEmployeeService;
 
 
@@ -24,7 +26,10 @@ import com.example.demo.service.IEmployeeService;
 public class EmployeeController {
 
 	@Autowired
-	IEmployeeService iEmployeeService;
+	private IEmployeeService iEmployeeService;
+
+	@Autowired
+	private AmazonClient amazonClient;
 
 	@GetMapping("/welcome/user")
 	public String welcomeUser() {
@@ -33,18 +38,21 @@ public class EmployeeController {
 	}
 
 	@PostMapping(path = "employee/addEmployeedetails")
-	public ResponseEntity<Employee> addEmployees(@RequestBody Optional<Employee> employee ,@RequestParam Optional<String> companyName) {
+	public ResponseEntity<String> addEmployees(@RequestBody Optional<Employee> employee ,@RequestParam Optional<String> companyName) throws IOException {
 
 		//Optional specify alternate values to return or alternate code to run.
 		//Optional is a container object which may or may not contain a non-null value.
 		if (employee.isPresent()&& companyName.isPresent()) {
 			Employee Savedemployee=iEmployeeService.saveUser(employee.get(),companyName.get());
+			String result=amazonClient.WriteToFile(Savedemployee);
 			//an Optional with a present value if the specified value is non-null
 			//otherwise an empty Optional
-			if(Optional.ofNullable(Savedemployee).isPresent())
-				return new ResponseEntity<Employee>(Savedemployee, HttpStatus.OK);
+			if(Optional.ofNullable(result).isPresent()) {
+				
+				return new ResponseEntity<String>(result, HttpStatus.OK);
+			}
 		}
-		return new ResponseEntity<Employee >(HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<String >(HttpStatus.BAD_REQUEST);
 	}
 
 	@GetMapping(path = "employee/getEmployeedetails")

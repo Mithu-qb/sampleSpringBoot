@@ -45,8 +45,8 @@ public class EmployeeDetailsService  implements IEmployeeService{
 			if (!employeesList.stream().anyMatch(predicate)) {
 				employee.setCompany(iCompanyService.getCompanyName(companyName));
 				if(Optional.ofNullable(employee.getCompany()).isPresent()) {
-					iEmployee.save(employee);
-					return employee;
+					
+					return iEmployee.save(employee);
 				}
 						
 			}

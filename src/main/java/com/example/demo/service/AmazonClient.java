@@ -1,14 +1,18 @@
 package com.example.demo.service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+
 import java.util.Date;
 
 import javax.annotation.PostConstruct;
 
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -19,7 +23,12 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.example.demo.model.Company;
+import com.example.demo.model.Employee;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AmazonClient {
@@ -62,26 +71,77 @@ public class AmazonClient {
 	}
 
 	public String uploadFile(MultipartFile multipartFile) {
-		String fileUrl = "";
-		try {
-			File file = new File(multipartFile.getOriginalFilename());
-			FileOutputStream fos = new FileOutputStream(file);
-			fos.write(multipartFile.getBytes());
-			fos.close();
-			String fileName = new Date().getTime() + "_" + multipartFile.getOriginalFilename().replace(" ", "_");
-			fileUrl = endpointUrl + "/" + bucketName + "/" + fileName;
-			uploadFileTos3bucket(fileName, file);
-			file.delete();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		
+		return extractValue(multipartFile.getOriginalFilename(), (Object) multipartFile);
+		 
+	}
+
+	public String WriteToFile(Object object) throws IOException {
+
+		if (object instanceof Employee)
+			return extractValue(((Employee) object).getId().toString(), object);
+
+		if (object instanceof Company)
+			return extractValue(((Company) object).getId().toString(), object);
+
+		return "Data Mismatch";
+
+	}
+
+	public String deleteFileFromS3Bucket(String fileUrl) {
+		String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+		System.out.println(fileName);
+		s3client.deleteObject(new DeleteObjectRequest(bucketName, fileName));
+		return "Successfully deleted";
+	}
+
+	private String extractValue(String fileName, Object data) {
+		File file = null;
+		file = covertObjectToJson(fileName, data);
+		String awsFileName = fileName + "_" + new Date().getTime() + ".txt";
+		String fileUrl = endpointUrl + "/" + bucketName + "/" + awsFileName;
+		uploadFileTos3bucket(awsFileName, file);
+		file.delete();
 		return fileUrl;
 	}
 
-	private void uploadFileTos3bucket(String fileName, File file) {
-		s3client.putObject(
-				new PutObjectRequest(bucketName, fileName, file));
+	private File covertObjectToJson(String fileName, Object data) {
+		ObjectMapper Obj = new ObjectMapper();
+		File file = new File(fileName);
+		FileOutputStream fos;
+		String jsonStr = null;
+		try {
+			if( data instanceof Employee)
+				jsonStr = Obj.writeValueAsString(data);
+			else if( data instanceof Company)
+				jsonStr = Obj.writeValueAsString(data);
+			else {
+				jsonStr=data.toString();
+			}
+			fos = new FileOutputStream(file);
+			fos.write(jsonStr.getBytes());
+			fos.close();
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return file;
 	}
 
-	
+	/*
+	 * bucketName - The name of an existing bucket, to which you have
+	 * Permission.Write permission.
+	 * key - The key under which to store the specified file. 
+	 * The file containing the data to be uploaded to Amazon
+	 * S3.
+	 */
+
+	private void uploadFileTos3bucket(String key, File file) {
+		s3client.putObject(new PutObjectRequest(bucketName, key, file));
+	}
+
 }
